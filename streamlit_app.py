@@ -87,7 +87,7 @@ def generate_bmp():
         draw.text((70, y_off), f"• {t_desc}", fill=0, font=font_row)
         y_off += 15
 
-    # 4. SAVINGS GOAL (Footer)
+   # 4. SAVINGS GOAL (Footer)
     draw.line([15, 152, 249, 152], fill=0, width=1)
     
     progress_pct = min(total_balance / goal_target, 1.0) if goal_target > 0 else 0
@@ -96,12 +96,16 @@ def generate_bmp():
     # Small Progress Bar
     bar_coords = [80, 160, 180, 168]
     draw.rectangle(bar_coords, outline=0, width=1)
-    fill_width = int(100 * progress_pct)
-    if fill_width > 0:
+    
+    # Calculate fill width
+    total_bar_width = bar_coords[2] - bar_coords[0] # This is 100 pixels
+    fill_width = int(total_bar_width * progress_pct)
+    
+    # ONLY draw the fill if the width is at least 5 pixels to avoid the math error
+    if fill_width > 4:
         draw.rectangle([bar_coords[0]+2, bar_coords[1]+2, bar_coords[0]+fill_width-2, bar_coords[3]-2], fill=0)
         
     draw.text((249, 164), f"{int(progress_pct*100)}%", fill=0, font=font_goal, anchor="rm")
-
     # --- SAVE ---
     img.save("transfer.bmp")
     return img
