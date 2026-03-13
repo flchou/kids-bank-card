@@ -75,37 +75,42 @@ def generate_time_bmp(worksheet, name):
     draw.text((88, 65), time_display, fill=0, font=font_time_val, anchor="mm")
     draw.text((88, 95), "TIME REMAINING", fill=0, font=font_unit, anchor="mm")
 
-    # 3. ACTIVITY LOG SECTION
+   # 3. ACTIVITY LOG SECTION
     draw.line([10, 110, 166, 110], fill=0, width=2)
     draw.text((88, 125), "ACTIVITY HISTORY", fill=0, font=font_log_header, anchor="mm")
     
     y_off = 145
-    for tx in reversed(recent_tx): # Show newest at top
+    for tx in reversed(recent_tx): # Newest at top
         try:
-            raw_amt = float(re.sub(r'[^\d.]', '', str(tx.get('Amount', '0'))))
-            t_type = str(tx.get('Type', '+'))
+            # 1. Get the raw numeric value
+            raw_amt_str = str(tx.get('Amount', '0'))
+            # Keep the minus sign if it exists, but remove other non-numeric junk
+            clean_amt_str = re.sub(r'[^\d.-]', '', raw_amt_str)
+            val = float(clean_amt_str)
             
-            # Determine Indicator and formatting
-            if '-' in t_type or raw_amt < 0:
+            # 2. Check Type column OR the number itself for a negative sign
+            t_type = str(tx.get('Type', ''))
+            
+            if val < 0 or '-' in t_type or '-' in raw_amt_str:
                 indicator = "[-]"
-                formatted_amt = format_time(abs(raw_amt))
+                # Use absolute value for the label so it stays clean
+                formatted_amt = format_time(abs(val))
             else:
                 indicator = "[+]"
-                formatted_amt = format_time(raw_amt)
+                formatted_amt = format_time(val)
 
             t_desc = str(tx.get('Description', ''))[:14]
             
-            # Draw Larger Indicator
+            # 3. Draw with the correct Indicator
             draw.text((10, y_off), indicator, fill=0, font=font_indicator)
-            
-            # Draw Amount and Description
             draw.text((45, y_off + 2), formatted_amt, fill=0, font=font_row_val)
             draw.text((100, y_off + 4), f"• {t_desc}", fill=0, font=font_row_desc)
             
-            y_off += 22 # More space between rows
-        except:
+            y_off += 22 
+        except Exception as e:
+            # Skip rows that don't have valid numbers
             continue
-
+            
     # 4. FOOTER (Last Updated)
     draw.line([10, 250, 166, 250], fill=0, width=1)
     now = datetime.now().strftime("%m/%d %H:%M")
