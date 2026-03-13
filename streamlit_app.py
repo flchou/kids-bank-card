@@ -16,7 +16,7 @@ creds = Credentials.from_service_account_info(creds_dict, scopes=scope)
 gc = gspread.authorize(creds)
 
 # Open your sheet
-sh = gc.open('1IiFdAUJrcKRuxREGMkn7ejWv395UZJtVIoekk8bVx50')
+sh = gc.open_by_url('https://docs.google.com/spreadsheets/d/1IiFdAUJrcKRuxREGMkn7ejWv395UZJtVIoekk8bVx50/edit')
 worksheet = sh.sheet1
 
 def generate_bmp():
