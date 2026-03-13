@@ -46,8 +46,8 @@ def generate_pro_bmp(worksheet, name):
         f_balance = ImageFont.truetype(font_path, 36)
         f_label = ImageFont.truetype(font_path, 11)
         f_section = ImageFont.truetype(font_path, 13)
-        f_row_time = ImageFont.truetype(font_path, 14)
-        f_row_desc = ImageFont.truetype(font_path, 14)
+        f_row_time = ImageFont.truetype(font_path, 12)
+        f_row_desc = ImageFont.truetype(font_path, 12)
         f_sync = ImageFont.truetype(font_path, 12) # Increased font size
     except Exception as e:
         st.error(f"Font Error: {e}")
