@@ -46,9 +46,10 @@ def generate_pro_bmp(worksheet, name):
         f_balance = ImageFont.truetype(font_path, 36)
         f_label = ImageFont.truetype(font_path, 11)
         f_section = ImageFont.truetype(font_path, 13)
-        f_row_time = ImageFont.truetype(font_path, 12)
-        f_row_desc = ImageFont.truetype(font_path, 12)
-        f_sync = ImageFont.truetype(font_path, 12) # Increased font size
+        # --- LARGER ACTIVITY FONTS ---
+        f_row_time = ImageFont.truetype(font_path, 14) # Increased from 12
+        f_row_desc = ImageFont.truetype(font_path, 12) # Increased from 10
+        f_sync = ImageFont.truetype(font_path, 12)     
     except Exception as e:
         st.error(f"Font Error: {e}")
         return None
@@ -78,11 +79,11 @@ def generate_pro_bmp(worksheet, name):
     draw.rectangle([10, 110, 166, 127], fill=0)
     draw.text((88, 118), "RECENT ACTIVITY", fill=1, font=f_section, anchor="mm")
 
-    # 4. Activity Logs (Pixel-Perfect Alignment)
+    # 4. Activity Logs (Spacing adjusted for larger font)
     col_bracket = 8
     col_time = 38
-    col_desc = 92
-    y_off = 138 
+    col_desc = 96 # Shifted right to accommodate larger time text
+    y_off = 136 
 
     for tx in reversed(recent_tx):
         try:
@@ -92,33 +93,34 @@ def generate_pro_bmp(worksheet, name):
             t_type = str(tx.get('Type', ''))
             is_neg = val < 0 or '-' in t_type or '-' in amt_str
             
-            # Manual 1px Brackets
+            # Manual 1px Brackets (Taller for larger font)
+            # '['
             draw.line([col_bracket, y_off, col_bracket+2, y_off], fill=0, width=1)
-            draw.line([col_bracket, y_off, col_bracket, y_off+12], fill=0, width=1)
-            draw.line([col_bracket, y_off+12, col_bracket+2, y_off+12], fill=0, width=1)
+            draw.line([col_bracket, y_off, col_bracket, y_off+14], fill=0, width=1)
+            draw.line([col_bracket, y_off+14, col_bracket+2, y_off+14], fill=0, width=1)
+            # ']'
             r_e = col_bracket + 20
             draw.line([r_e-2, y_off, r_e, y_off], fill=0, width=1)
-            draw.line([r_e, y_off, r_e, y_off+12], fill=0, width=1)
-            draw.line([r_e-2, y_off+12, r_e, y_off+12], fill=0, width=1)
+            draw.line([r_e, y_off, r_e, y_off+14], fill=0, width=1)
+            draw.line([r_e-2, y_off+14, r_e, y_off+14], fill=0, width=1)
 
             # Manual 1px +/- Symbol
-            mid_x, mid_y = col_bracket + 10, y_off + 6
+            mid_x, mid_y = col_bracket + 10, y_off + 7
             draw.line([mid_x-4, mid_y, mid_x+4, mid_y], fill=0, width=1)
             if not is_neg:
                 draw.line([mid_x, mid_y-4, mid_x, mid_y+4], fill=0, width=1)
 
-            # Row Text
+            # Row Text (Using larger fonts)
             draw.text((col_time, y_off), format_time(abs(val)), fill=0, font=f_row_time)
-            desc = str(tx.get('Description', ''))[:11]
-            draw.text((col_desc, y_off + 2), f"• {desc}", fill=0, font=f_row_desc)
+            desc = str(tx.get('Description', ''))[:9] # Reduced to 9 chars
+            draw.text((col_desc, y_off + 1), f"• {desc}", fill=0, font=f_row_desc)
             
-            draw.line([10, y_off + 17, 166, y_off + 17], fill=0, width=1)
-            y_off += 21 
+            draw.line([10, y_off + 19, 166, y_off + 19], fill=0, width=1)
+            y_off += 23 # Increased spacing to 23px
         except:
             continue
 
     # 5. Footer (PDT Adjustment)
-    # White box clears space for the 12px font
     draw.rectangle([0, 248, 176, 264], fill=255)
     
     # Calculate PDT (UTC - 7)
@@ -131,25 +133,25 @@ def generate_pro_bmp(worksheet, name):
     img.save(filename)
     return filename
 
-# --- 4. Streamlit Tabs ---
+# --- 4. Streamlit UI Logic ---
 tab_k, tab_e = st.tabs(["Kayden", "Ethan"])
 
 with tab_k:
     if st.button('🔄 Sync Kayden'):
-        with st.spinner('Accessing Kayden...'):
+        with st.spinner('Syncing...'):
             ws_k = sh.worksheet("Kayden")
             fname_k = generate_pro_bmp(ws_k, "Kayden")
             if fname_k:
                 st.image(fname_k, width=176)
                 with open(fname_k, "rb") as f:
-                    st.download_button("📥 Download Kayden BMP", f, file_name=fname_k)
+                    st.download_button("📥 Download BMP", f, file_name=fname_k)
 
 with tab_e:
     if st.button('🔄 Sync Ethan'):
-        with st.spinner('Accessing Ethan...'):
+        with st.spinner('Syncing...'):
             ws_e = sh.worksheet("Ethan")
             fname_e = generate_pro_bmp(ws_e, "Ethan")
             if fname_e:
                 st.image(fname_e, width=176)
                 with open(fname_e, "rb") as f:
-                    st.download_button("📥 Download Ethan BMP", f, file_name=fname_e)
+                    st.download_button("📥 Download BMP", f, file_name=fname_e)
