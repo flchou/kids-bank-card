@@ -61,13 +61,12 @@ def generate_pro_bmp(worksheet, name):
     draw.rectangle([10, 110, 166, 127], fill=0)
     draw.text((88, 118), "RECENT ACTIVITY", fill=1, font=f_section, anchor="mm")
 
-    # 4. ALIGNED ACTIVITY LOGS
-    # Fixed Column X-Positions
-    COL_IND = 12   # Indicator [+]
+# 4. ALIGNED ACTIVITY LOGS
+    COL_IND = 10   # Starting X for the symbol
     COL_TIME = 38  # Time 1h 30m
     COL_DESC = 92  # Description
     
-    y_off = 138 # Starting Y
+    y_off = 138 
     for tx in reversed(recent_tx):
         try:
             amt_str = str(tx.get('Amount', '0'))
@@ -75,17 +74,33 @@ def generate_pro_bmp(worksheet, name):
             t_type = str(tx.get('Type', ''))
             
             is_neg = val < 0 or '-' in t_type or '-' in amt_str
-            indicator = "[ - ]" if is_neg else "[ + ]"
             formatted_amt = format_time(abs(val))
-            t_desc = str(tx.get('Description', ''))[:12] # Shorter to prevent overlap
+            t_desc = str(tx.get('Description', ''))[:12]
 
-            # Precise vertical and horizontal alignment
-            draw.text((COL_IND, y_off), indicator, fill=0, font=f_row_time)
+            # --- CUSTOM DRAWN INDICATORS ---
+            symbol_center_y = y_off + 8 # Adjust to align with text center
+            symbol_width = 10           # Length of the minus/plus bars
+            
+            if is_neg:
+                # Long Minus Sign: [ — ]
+                # Draw brackets first
+                draw.text((COL_IND, y_off), "[   ]", fill=0, font=f_row_time)
+                # Draw the long line inside the brackets
+                draw.line([COL_IND + 6, symbol_center_y, COL_IND + 6 + symbol_width, symbol_center_y], fill=0, width=2)
+            else:
+                # Custom Plus Sign: [ + ]
+                draw.text((COL_IND, y_off), "[   ]", fill=0, font=f_row_time)
+                # Horizontal bar
+                draw.line([COL_IND + 6, symbol_center_y, COL_IND + 6 + symbol_width, symbol_center_y], fill=0, width=2)
+                # Vertical bar
+                draw.line([COL_IND + 6 + (symbol_width//2), symbol_center_y - 5, COL_IND + 6 + (symbol_width//2), symbol_center_y + 5], fill=0, width=2)
+
+            # --- TEXT COLUMNS ---
             draw.text((COL_TIME, y_off), formatted_amt, fill=0, font=f_row_time)
             draw.text((COL_DESC, y_off + 2), f"• {t_desc}", fill=0, font=f_row_desc)
             
             draw.line([10, y_off + 17, 166, y_off + 17], fill=0, width=1)
-            y_off += 21 # Reduced from 23 to save 10px total vertical space
+            y_off += 21 
         except: continue
 
     # 5. FOOTER (Guaranteed no overlap)
