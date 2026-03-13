@@ -75,7 +75,7 @@ def generate_pro_bmp(worksheet, name):
             t_type = str(tx.get('Type', ''))
             
             is_neg = val < 0 or '-' in t_type or '-' in amt_str
-            indicator = "[-]" if is_neg else "[+]"
+            indicator = "[ - ]" if is_neg else "[+]"
             formatted_amt = format_time(abs(val))
             t_desc = str(tx.get('Description', ''))[:12] # Shorter to prevent overlap
 
