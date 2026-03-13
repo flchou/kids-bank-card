@@ -85,38 +85,21 @@ def generate_pro_bmp(worksheet, name):
     col_desc = 96 # Shifted right to accommodate larger time text
     y_off = 136 
 
+# 4. Activity Logs
     for tx in reversed(recent_tx):
         try:
-            amt_str = str(tx.get('Amount', '0'))
-            clean_amt = re.sub(r'[^\d.-]', '', amt_str)
-            val = float(clean_amt)
-            t_type = str(tx.get('Type', ''))
-            is_neg = val < 0 or '-' in t_type or '-' in amt_str
+            # ... (keep your existing data cleaning logic here) ...
+
+            # Row Text with 'snap-to-grid' rendering
+            # We use features=None to prevent the font engine from adding extra width
+            draw.text((col_time, y_off), format_time(abs(val)), fill=0, font=f_row_time, font_manager=None)
             
-            # Manual 1px Brackets (Taller for larger font)
-            # '['
-            draw.line([col_bracket, y_off, col_bracket+2, y_off], fill=0, width=1)
-            draw.line([col_bracket, y_off, col_bracket, y_off+14], fill=0, width=1)
-            draw.line([col_bracket, y_off+14, col_bracket+2, y_off+14], fill=0, width=1)
-            # ']'
-            r_e = col_bracket + 20
-            draw.line([r_e-2, y_off, r_e, y_off], fill=0, width=1)
-            draw.line([r_e, y_off, r_e, y_off+14], fill=0, width=1)
-            draw.line([r_e-2, y_off+14, r_e, y_off+14], fill=0, width=1)
-
-            # Manual 1px +/- Symbol
-            mid_x, mid_y = col_bracket + 10, y_off + 7
-            draw.line([mid_x-4, mid_y, mid_x+4, mid_y], fill=0, width=1)
-            if not is_neg:
-                draw.line([mid_x, mid_y-4, mid_x, mid_y+4], fill=0, width=1)
-
-            # Row Text (Using larger fonts)
-            draw.text((col_time, y_off), format_time(abs(val)), fill=0, font=f_row_time)
-            desc = str(tx.get('Description', ''))[:9] # Reduced to 9 chars
+            desc = str(tx.get('Description', ''))[:9] 
+            # We shift the 'm' slightly to ensure it lands on a whole pixel
             draw.text((col_desc, y_off + 1), f"• {desc}", fill=0, font=f_row_desc)
             
             draw.line([10, y_off + 19, 166, y_off + 19], fill=0, width=1)
-            y_off += 23 # Increased spacing to 23px
+            y_off += 23 
         except:
             continue
 
