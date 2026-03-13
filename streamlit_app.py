@@ -19,68 +19,78 @@ gc = gspread.authorize(creds)
 # Open your sheet
 sh = gc.open_by_url('https://docs.google.com/spreadsheets/d/1IiFdAUJrcKRuxREGMkn7ejWv395UZJtVIoekk8bVx50/edit')
 worksheet = sh.sheet1
+
+
+
 def generate_bmp():
-    # 1. Image Settings (High Res)
+    # 1. Canvas Setup (High Res 800x480)
     width, height = 800, 480
-    img = Image.new('1', (width, height), 255) # 1-bit B&W
+    img = Image.new('1', (width, height), 255) 
     draw = ImageDraw.Draw(img)
     
-    # 2. Fetch Data
+    # 2. Load Fonts (Ensure the filename matches your uploaded file exactly)
+    font_path = "Roboto-VariableFont_wdth,wght.ttf"
     try:
-        raw_val = worksheet.acell('F1').value
-        clean_val = re.sub(r'[^\d.]', '', raw_val)
-        total_balance = float(clean_val)
+        font_header = ImageFont.truetype(font_path, 35)
+        font_balance = ImageFont.truetype(font_path, 140)
+        font_sub = ImageFont.truetype(font_path, 30)
+        font_activity = ImageFont.truetype(font_path, 32)
+        font_goal = ImageFont.truetype(font_path, 28)
     except:
-        total_balance = 0.0
+        st.error("Font file not found. Ensure it is in the same folder as this script.")
+        return None
 
-    # 3. HEADER
-    draw.rectangle([0, 0, 800, 60], fill=0)
-    # Using default font, but at 800x480 you can draw larger by 'scaling' 
-    # if you don't have a custom TTF font file uploaded to GitHub.
-    draw.text((20, 15), "MY HOME BANK • LEO'S CARD", fill=1)
-
-    # 4. TOP SECTION: BALANCE
-    # We simulate a large font by drawing a bit thicker or using a larger size
-    draw.text((50, 80), f"${total_balance:.2f}", fill=0)
-    draw.text((50, 160), "TOTAL AVAILABLE", fill=0)
+    # 3. Data Fetch
+    raw_val = worksheet.acell('F1').value
+    clean_val = re.sub(r'[^\d.]', '', raw_val)
+    total_balance = float(clean_val)
     
-    # Draw simple +/- icons on the right
-    draw.ellipse([600, 80, 720, 200], outline=0, width=5)
-    draw.line([630, 140, 690, 140], fill=0, width=8) # Minus
-    draw.line([660, 110, 660, 170], fill=0, width=8) # Plus
+    # 4. HEADER (Black bar with white text)
+    draw.rectangle([0, 0, 800, 65], fill=0)
+    draw.text((400, 32), "MY HOME BANK • LEO'S CARD", fill=1, font=font_header, anchor="mm")
 
-    # 5. MIDDLE SECTION: RECENT ACTIVITY
-    draw.line([40, 230, 760, 230], fill=0, width=3) # Divider
-    draw.text((50, 250), "Recent Activity", fill=0)
+    # 5. BALANCE SECTION
+    # Large centered balance
+    draw.text((400, 160), f"${total_balance:.2f}", fill=0, font=font_balance, anchor="mm")
+    draw.text((400, 245), "TOTAL AVAILABLE", fill=0, font=font_sub, anchor="mm")
+    
+    # Simple Icons (Centered relative to the text)
+    # Plus/Minus circles
+    draw.ellipse([620, 110, 710, 200], outline=0, width=4)
+    draw.line([640, 155, 690, 155], fill=0, width=6) # Minus
+    draw.line([665, 130, 665, 180], fill=0, width=6) # Plus
+
+    # 6. RECENT ACTIVITY (3 rows)
+    draw.line([50, 280, 750, 280], fill=0, width=2)
+    draw.text((60, 300), "Recent Activity", fill=0, font=font_activity)
     
     data = worksheet.get_all_records()
-    recent_tx = data[-3:] # Get last 3
+    recent_tx = data[-3:] # Last 3 items
     
-    y_pos = 290
+    y_off = 345
     for tx in recent_tx:
-        # Assumes columns: Type, Amount, Description
         t_type = tx.get('Type', '+')
         t_amt = tx.get('Amount', '0')
         t_desc = tx.get('Description', 'Chore')
         
-        draw.text((50, y_pos), f"{t_type}${t_amt} • {t_desc}", fill=0)
-        y_pos += 40
+        # Draw transaction line
+        draw.text((60, y_off), f"{t_type}${t_amt}", fill=0, font=font_activity)
+        draw.text((180, y_off), f"• {t_desc}", fill=0, font=font_activity)
+        y_off += 40
 
-    # 6. BOTTOM SECTION: SAVINGS GOAL
-    goal_name = "New Bike"
+    # 7. GOAL SECTION (Bottom)
     goal_target = 100.0
-    progress = min(total_balance / goal_target, 1.0)
+    progress_pct = min(total_balance / goal_target, 1.0)
     
-    draw.text((50, 410), f"Saving for: {goal_name}", fill=0)
-    draw.text((550, 410), f"{int(progress*100)}% to my Bike!", fill=0)
+    draw.text((60, 440), "Saving for: New Bike", fill=0, font=font_goal, anchor="lm")
+    draw.text((740, 440), f"{int(progress_pct*100)}% of $100.00", fill=0, font=font_goal, anchor="rm")
     
-    # Progress Bar Background
-    draw.rectangle([50, 440, 750, 465], outline=0, width=3)
-    # Progress Fill
-    fill_width = int(700 * progress)
-    if fill_width > 4:
-        draw.rectangle([54, 444, 50 + fill_width, 461], fill=0)
+    # Progress Bar (Modern pill shape)
+    bar_coords = [250, 430, 550, 450]
+    draw.rectangle(bar_coords, outline=0, width=2)
+    fill_end = bar_coords[0] + (300 * progress_pct)
+    draw.rectangle([bar_coords[0]+4, bar_coords[1]+4, fill_end-4, bar_coords[3]-4], fill=0)
 
-    # 7. Final Polish
+    # 8. Save
     img.save("transfer.bmp")
     return img
