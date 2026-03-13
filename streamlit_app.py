@@ -25,7 +25,8 @@ except Exception as e:
 def format_time(val):
     """Converts a float (1.5) to a string (1h 30m)"""
     try:
-        total_minutes = int(float(val) * 60)
+        # Absolute value used for the string; the +/- sign is handled separately in the UI
+        total_minutes = int(abs(float(val)) * 60)
         hours = total_minutes // 60
         minutes = total_minutes % 60
         if hours > 0:
@@ -42,13 +43,13 @@ def generate_time_bmp(worksheet, name):
     
     font_path = "Roboto-VariableFont_wdth,wght.ttf"
     try:
-        font_header = ImageFont.truetype(font_path, 16)
-        font_time_val = ImageFont.truetype(font_path, 34) 
-        font_unit = ImageFont.truetype(font_path, 12)
-        font_label = ImageFont.truetype(font_path, 12)
-        font_row_bold = ImageFont.truetype(font_path, 11) # For the +/- indicator
-        font_row = ImageFont.truetype(font_path, 11)
-        font_goal = ImageFont.truetype(font_path, 10)
+        font_header = ImageFont.truetype(font_path, 18)
+        font_time_val = ImageFont.truetype(font_path, 44)
+        font_unit = ImageFont.truetype(font_path, 14)
+        font_log_header = ImageFont.truetype(font_path, 16)
+        font_symbol = ImageFont.truetype(font_path, 20) # Bold +/- indicators
+        font_row_val = ImageFont.truetype(font_path, 15)   # Larger row text
+        font_desc = ImageFont.truetype(font_path, 13)
     except:
         st.error("Font error. Check .ttf file.")
         return None
@@ -58,65 +59,51 @@ def generate_time_bmp(worksheet, name):
         raw_val = worksheet.acell('F1').value
         time_display = format_time(re.sub(r'[^\d.]', '', str(raw_val)))
         
-        goal_name = worksheet.acell('H1').value or "Reward"
-        goal_target_val = re.sub(r'[^\d.]', '', str(worksheet.acell('I1').value))
-        goal_target = float(goal_target_val) if goal_target_val else 10.0
-        
         all_data = worksheet.get_all_records()
-        recent_tx = all_data[-3:] 
+        # With Goal removed, we can easily fit the last 4 or 5 logs
+        recent_tx = all_data[-5:] 
     except:
-        time_display, goal_name, goal_target, recent_tx = "0m", "Goal", 10.0, []
+        time_display, recent_tx = "0m", []
 
-    # --- UI DRAWING ---
+    # --- UI DRAWING (VERTICAL) ---
 
     # 1. HEADER BAR
-    draw.rectangle([0, 0, 176, 25], fill=0)
-    draw.text((88, 12), f"{name.upper()}'S TIME", fill=1, font=font_header, anchor="mm")
+    draw.rectangle([0, 0, 176, 30], fill=0)
+    draw.text((88, 15), f"{name.upper()}'S TIME", fill=1, font=font_header, anchor="mm")
 
     # 2. MAIN TIME DISPLAY
-    draw.text((88, 65), time_display, fill=0, font=font_time_val, anchor="mm")
-    draw.text((88, 95), "TIME REMAINING", fill=0, font=font_unit, anchor="mm")
+    draw.text((88, 75), time_display, fill=0, font=font_time_val, anchor="mm")
+    draw.text((88, 108), "TIME REMAINING", fill=0, font=font_unit, anchor="mm")
 
-    # 3. ACTIVITY LOG (Improved Indicators)
-    draw.line([15, 115, 161, 115], fill=0, width=1)
-    draw.text((15, 125), "History", fill=0, font=font_label)
+    # 3. ACTIVITY HISTORY (Expanded Space)
+    draw.line([10, 130, 166, 130], fill=0, width=2)
+    draw.text((15, 145), "Activity History", fill=0, font=font_log_header)
     
-    y_off = 145
+    y_off = 175
     for tx in recent_tx:
-        # Determine indicator based on Type column
-        t_type = str(tx.get('Type', '')).strip()
-        indicator = "[+]" if "+" in t_type else "[-]"
+        raw_amt = 0
+        try:
+            raw_amt = float(re.sub(r'[^\d.-]', '', str(tx.get('Amount', '0'))))
+        except: pass
         
-        # Format the time amount
-        raw_amt = re.sub(r'[^\d.]', '', str(tx.get('Amount', '0')))
+        # Large Indicator (+ for Earned, - for Used)
+        symbol = "+" if raw_amt >= 0 else "-"
         t_amt_formatted = format_time(raw_amt)
-        
-        # Description
         t_desc = str(tx.get('Description', ''))[:12]
         
-        # Draw: Indicator - Time - Description
-        draw.text((12, y_off), f"{indicator} {t_amt_formatted}", fill=0, font=font_row_bold)
-        draw.text((80, y_off), f"• {t_desc}", fill=0, font=font_row)
-        y_off += 20 # Increased spacing for clarity
+        # Draw Symbol (Large and clear)
+        draw.text((15, y_off), symbol, fill=0, font=font_symbol, anchor="lm")
+        
+        # Draw Amount
+        draw.text((35, y_off), t_amt_formatted, fill=0, font=font_row_val, anchor="lm")
+        
+        # Draw Description
+        draw.text((95, y_off), f"• {t_desc}", fill=0, font=font_desc, anchor="lm")
+        
+        y_off += 28 # Bigger gap between rows
 
-    # 4. REWARD GOAL (Bottom)
-    draw.line([15, 215, 161, 215], fill=0, width=1)
-    
-    try:
-        num_val = float(re.sub(r'[^\d.]', '', str(worksheet.acell('F1').value)))
-        progress = min(num_val / goal_target, 1.0)
-    except: progress = 0
-    
-    draw.text((15, 230), f"Goal: {goal_name}", fill=0, font=font_goal)
-    
-    # Progress Bar
-    bar_coords = [15, 240, 161, 250]
-    draw.rectangle(bar_coords, outline=0, width=1)
-    fill_w = int((bar_coords[2] - bar_coords[0]) * progress)
-    if fill_w > 4:
-        draw.rectangle([bar_coords[0]+2, bar_coords[1]+2, bar_coords[0]+fill_w-2, bar_coords[3]-2], fill=0)
-    
-    draw.text((88, 258), f"{int(progress*100)}% to {format_time(goal_target)}", fill=0, font=font_goal, anchor="mm")
+    # Final visual touch: Bottom border
+    draw.line([0, 263, 176, 263], fill=0, width=1)
 
     filename = f"{name.lower()}_time.bmp"
     img.save(filename)
@@ -132,7 +119,7 @@ with tab_k:
         if fname:
             st.image(fname, width=176)
             with open(fname, "rb") as f:
-                st.download_button("📥 Download BMP", f, file_name=fname)
+                st.download_button("📥 Download Kayden BMP", f, file_name=fname)
 
 with tab_e:
     if st.button('🔄 Sync Ethan'):
@@ -141,4 +128,4 @@ with tab_e:
         if fname:
             st.image(fname, width=176)
             with open(fname, "rb") as f:
-                st.download_button("📥 Download BMP", f, file_name=fname)
+                st.download_button("📥 Download Ethan BMP", f, file_name=fname)
